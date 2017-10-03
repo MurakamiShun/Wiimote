@@ -41,27 +41,16 @@ public:
 
 	//0 … x, y … 1 (1024x768)
 	class Pointers {
-	private:
+	public:
 		struct Pos {
 			double x, y;
 			int size;
-		} pointers [4];
-
-	public:
-		Pointers() {
-			for (int i = 0; i < 4; i++) 
-				pointers[i].size = pointers[i].x = pointers[i].y = 0;
-		}
-		Pos& operator[](unsigned int n) {
-			return pointers[n];
-		}
-		Pos getMaximunPos() {
-			unsigned int size,num = 0;
-			for (int i = 1; i < 4; i++)
-				if (pointers[num].size < pointers[i].size && pointers[i].size == 0x0f)
-					size = pointers[num = i].size;
-			return pointers[num];
-		}
+		};
+		Pointers();
+		Pos& operator[](unsigned int n);
+		Pos getMaximunPos();
+	private:
+		Pos pointers [4];
 	} pointer;
 
 	Wiimote();

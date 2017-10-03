@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <iomanip>
 #include "Wiimote.hpp"
 #include <stdlib.h>
@@ -6,7 +6,7 @@
 using namespace std;
 
 
-auto main() -> int{
+auto main() -> int {
 	Wiimote wii;
 	wii.open();
 
@@ -21,7 +21,7 @@ auto main() -> int{
 		wii.disableRumble();
 		Sleep(50);
 	}
-	cout << "Home‚ÅI—¹" << endl;
+	cout << "Homeã§çµ‚äº†" << endl;
 	while (!wii.Button.Home) {
 		cout << "\rA:" << wii.Button.A
 			<< " B:" << wii.Button.B
@@ -29,14 +29,14 @@ auto main() -> int{
 			<< " -:" << wii.Button.Minus
 			<< " 1:" << wii.Button.One
 			<< " 2:" << wii.Button.Two
-			<< " ª:" << wii.Button.Up
-			<< " «:" << wii.Button.Down
-			<< " ©:" << wii.Button.Left
-			<< " ¨:" << wii.Button.Right
-			<< fixed << setprecision(4)
-			<< " X:" << wii.acc.x
-			<< " Y:" << wii.acc.y
-			<< " Z:" << wii.acc.z;
+			<< " Ââ†‘:" << wii.Button.Up
+			<< " Ââ†“:" << wii.Button.Down
+			<< " Ââ†:" << wii.Button.Left
+			<< " Ââ†’:" << wii.Button.Right
+			<< " X:"
+			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().x
+			<< " Y:"
+			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().y;
 		Sleep(10);
 	}
 	wii.close();

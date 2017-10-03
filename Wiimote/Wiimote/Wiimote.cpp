@@ -9,6 +9,7 @@
 #pragma comment(lib, "setupapi")
 
 
+
 enum OutputReport {
 	LEDs = 0x11,
 	DataReportType = 0x12,
@@ -24,7 +25,6 @@ Wiimote::Wiimote() {
 	Button.One = Button.Two = Button.A = Button.B = 
 	Button.Minus = Button.Plus = Button.Home = 
 	Button.Up = Button.Down = Button.Left = Button.Right = false;
-	pointer.x = pointer.y = 0;
 	acc.x = acc.y = acc.z = 0;
 }
 
@@ -52,7 +52,7 @@ void Wiimote::setWriteMethod() {
 			NULL
 		);
 	}
-	read(in);
+	HidD_GetInputReport(wiihandle, in, input_length);
 	if (in[0] == 0x20)
 		int j = in[0];
 
@@ -153,6 +153,7 @@ Wiimote::Status Wiimote::open() {
 					input_length = Capabilities.InputReportByteLength;
 					output_length = Capabilities.OutputReportByteLength;
 					wiihandle = handle;
+					Sleep(100);
 					setWriteMethod();
 					th = std::thread(updateThead, this);
 					return Status::Success;
@@ -250,7 +251,8 @@ void Wiimote::update() {
 	read(in);
 	mtx.unlock();
 	//判定
-	//in[0]=0x33
+	//0x33
+	//ボタン
 	Button.One = in[2] & 0x0002;
 	Button.Two = in[2] & 0x0001;
 	Button.A = in[2] & 0x0008;
@@ -263,6 +265,7 @@ void Wiimote::update() {
 	Button.Left = in[1] & 0x0001;
 	Button.Right = in[1] & 0x0002;
 	
+	//加速度センサ
 	const int zero = 481;
 	unsigned int x = ((in[1] & (0x20 | 0x40)) >> 5) + (in[3] << 2);
 	unsigned int y = ((in[2] & 0x20) >> 4) + (in[4] << 2);
@@ -270,6 +273,21 @@ void Wiimote::update() {
 	acc.x = ((double)((int)x - zero)) / 98.0;
 	acc.y = ((double)((int)y - zero)) / 98.0;
 	acc.z = ((double)((int)z - zero)) / 98.0;
+	
+	//IRカメラ
+	for (int i = 0; i < 4; i++) {
+		x = in[i * 3 + 6] + ((unsigned int)(in[i * 3 + 8] & 0x30) << 4);
+		y = in[i * 3 + 7] + ((unsigned int)(in[i * 3 + 8] & 0xC0) << 2);
+		unsigned short size = in[i * 3 + 8] & 0xf;
+		pointer[i].x = (double)x / 1023;
+		pointer[i].y = (double)y / 767;
+		pointer[i].size = size;
+		if (size == 15) {
+			pointer[i].x = -1;
+			pointer[i].y = -1;
+			pointer[i].size = -1;
+		}
+	}
 	delete[] in;
 }
 
@@ -292,30 +310,28 @@ void Wiimote::updateThead(Wiimote* wii) {
 
 	while (wii->wiihandle != nullptr) {
 		wii->update();
-		Sleep(1);
+		//Sleep(1);
 	}
 }
 
 void Wiimote::initIRCamera() {
 	unsigned char* out = new unsigned char[output_length];
 	unsigned char* in = new unsigned char[input_length];
+	
+	mtx.lock();
 	//IRカメラの有効化
 	out[0] = OutputReport::IR;
 	out[1] = 0x04;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 
 	out[0] = OutputReport::IR2;
 	out[1] = 0x04;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
 
-	//0xb00030に0x08を書き込む
+	//0xb00030に0x01を書き込む
 	out[0] = OutputReport::WriteMemory;
 	//レジスタから
 	out[1] = 0x04;
@@ -327,11 +343,11 @@ void Wiimote::initIRCamera() {
 	out[5] = 1;
 	//データ(max16byte)
 	out[6] = 0x08;
-	mtx.lock();
 	write(out);
-	read(in);
-	mtx.unlock();
+	//read(in);
 	Sleep(60);
+
+
 
 	//block1
 	out[0] = OutputReport::WriteMemory;
@@ -350,13 +366,11 @@ void Wiimote::initIRCamera() {
 	out[9] = 0x00;
 	out[10] = 0x00;
 	out[11] = 0x00;
-	out[12] = 0xFF;
+	out[12] = 0x90;
 	out[13] = 0x00;
-	out[14] = 0x0C;
-	mtx.lock();
+	out[14] = 0xC0;
 	write(out);
-	read(in);
-	mtx.unlock();
+	//read(in);
 	Sleep(60);
 
 	//block2
@@ -370,12 +384,10 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 2;
 	//データ(max16byte)
-	out[6] = 0x00;
+	out[6] = 0x40;
 	out[7] = 0x00;
-	mtx.lock();
 	write(out);
-	read(in);
-	mtx.unlock();
+	//read(in);
 	Sleep(60);
 
 	//mode number
@@ -389,11 +401,9 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 1;
 	//データ(max16byte)
-	out[6] = 5;
-	mtx.lock();
+	out[6] = 3;
 	write(out);
-	read(in);
-	mtx.unlock();
+	//read(in);
 	Sleep(60);
 
 	//0xb00030に0x08を書き込む
@@ -408,9 +418,9 @@ void Wiimote::initIRCamera() {
 	out[5] = 1;
 	//データ(max16byte)
 	out[6] = 0x08;
-	mtx.lock();
 	write(out);
-	read(in);
-	mtx.unlock();
+	//read(in);
 	Sleep(60);
+
+	mtx.unlock();
 }

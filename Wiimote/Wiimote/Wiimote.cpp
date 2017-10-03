@@ -2,6 +2,7 @@
 #include <Windows.h>
 #include <setupapi.h>
 #include <hidsdi.h>
+#include <chrono>
 
 #include <thread>
 
@@ -56,6 +57,9 @@ void Wiimote::setWriteMethod() {
 	if (in[0] == 0x20)
 		int j = in[0];
 
+
+	delete[] out;
+	delete[] in;
 	return;
 }
 
@@ -127,6 +131,7 @@ Wiimote::Status Wiimote::open() {
 			0,
 			NULL
 		);
+		delete[] Detail;
 		//エラー処理
 		if (handle == INVALID_HANDLE_VALUE) {
 			continue;
@@ -294,7 +299,7 @@ void Wiimote::update() {
 void Wiimote::updateThead(Wiimote* wii) {
 	unsigned char* out = new unsigned char[wii->output_length];
 	unsigned char* in = new unsigned char[wii->input_length];
-	wii->setLED(0x01);
+	wii->setLED(0x04);
 	//データ転送モードの設定
 	out[0] = OutputReport::DataReportType;
 	out[1] = 0x00;
@@ -303,14 +308,17 @@ void Wiimote::updateThead(Wiimote* wii) {
 	wii->write(out);
 	wii->read(in);
 	wii->mtx.unlock();
+	wii->setLED(0x02);
 	wii->initIRCamera();
-
+	wii->setLED(0x01);
 	delete[] out;
 	delete[] in;
 
 	while (wii->wiihandle != nullptr) {
+		auto start = std::chrono::system_clock::now();
 		wii->update();
-		//Sleep(1);
+		Sleep(2);
+		wii->fps = 1000/std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
 	}
 }
 
@@ -423,6 +431,8 @@ void Wiimote::initIRCamera() {
 	Sleep(60);
 
 	mtx.unlock();
+	delete[] out;
+	delete[] in;
 }
 
 Wiimote::Pointers::Pos Wiimote::Pointers::getMaximunPos() {

@@ -8,7 +8,9 @@ using namespace std;
 
 auto main() -> int {
 	Wiimote wii;
-	wii.open();
+	if (wii.open() == Wiimote::Status::Error) {
+		return 0;
+	}
 
 	wii.setLED(0x01 | 0x02);
 
@@ -17,9 +19,9 @@ auto main() -> int {
 	cout << " ----------------------------\n" << endl;
 	for (int i = 0; i < 2; i++) {
 		wii.ableRumble();
-		Sleep(50);
+		Sleep(100);
 		wii.disableRumble();
-		Sleep(50);
+		Sleep(100);
 	}
 	cout << "Homeで終了" << endl;
 	while (!wii.Button.Home) {
@@ -36,8 +38,10 @@ auto main() -> int {
 			<< " X:"
 			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().x
 			<< " Y:"
-			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().y;
-		Sleep(10);
+			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().y
+			<< "  "
+			<< setw(3) << right << (int)wii.fps << " fps";
+		Sleep(30);
 	}
 	wii.close();
 	return 0;

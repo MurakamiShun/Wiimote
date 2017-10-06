@@ -123,4 +123,9 @@ public:
 	///LED1:0x1, LED2:0x2, LED3:0x4, LED4:0x8
 	///</summary>
 	void setLED(unsigned char LED);
+
+	///<summary>
+	///Ú‘±‚µ‚Ä‚¢‚é‚©
+	///</summary>
+	bool isOpened();
 };

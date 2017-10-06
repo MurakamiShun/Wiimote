@@ -82,12 +82,12 @@ void Wiimote::write(unsigned char* output_report) {
 
 void Wiimote::read(unsigned char * input_report) {
 	DWORD buff;
-	bool error = ReadFile(
+	ReadFile(
 		(HANDLE)wiihandle,
 		input_report,
 		input_length,
 		&buff,
-		NULL
+		(LPOVERLAPPED)NULL
 	);
 }
 
@@ -191,7 +191,7 @@ void Wiimote::rumble(bool on){
 		(LEDs.LED2 ? 0x20 : 0) |
 		(LEDs.LED3 ? 0x40 : 0) |
 		(LEDs.LED4 ? 0x80 : 0)
-		| Rumble;
+		| (Rumble ? 0x01 : 0);
 
 	mtx.lock();
 	write(out);
@@ -225,7 +225,7 @@ void Wiimote::setLED(bool first, bool second, bool third, bool fourth) {
 		(second ? 0x20 : 0) |
 		(third  ? 0x40 : 0) |
 		(fourth ? 0x80 : 0)
-		| Rumble;
+		| (Rumble ? 0x01 : 0);
 
 	mtx.lock();
 	write(out);
@@ -238,10 +238,10 @@ void Wiimote::setLED(bool first, bool second, bool third, bool fourth) {
 
 void Wiimote::setLED(unsigned char LED) {
 	setLED(
-		LED & 0x01,
-		LED & 0x02,
-		LED & 0x04,
-		LED & 0x08
+		(LED & 0x01) ? true : false,
+		(LED & 0x02) ? true : false,
+		(LED & 0x04) ? true : false,
+		(LED & 0x08) ? true : false
 	);
 }
 
@@ -258,17 +258,17 @@ void Wiimote::update() {
 	//判定
 	//0x33
 	//ボタン
-	Button.One = in[2] & 0x0002;
-	Button.Two = in[2] & 0x0001;
-	Button.A = in[2] & 0x0008;
-	Button.B = in[2] & 0x0004;
-	Button.Minus = in[2] & 0x0010;
-	Button.Plus = in[1] & 0x0010;
-	Button.Home = in[2] & 0x0080;
-	Button.Up = in[1] & 0x0008;
-	Button.Down = in[1] & 0x0004;
-	Button.Left = in[1] & 0x0001;
-	Button.Right = in[1] & 0x0002;
+	Button.One = (in[2] & 0x0002) ? true : false;
+	Button.Two = (in[2] & 0x0001) ? true : false;
+	Button.A = (in[2] & 0x0008) ? true : false;
+	Button.B = (in[2] & 0x0004) ? true : false;
+	Button.Minus = (in[2] & 0x0010) ? true : false;
+	Button.Plus = (in[1] & 0x0010) ? true : false;
+	Button.Home = (in[2] & 0x0080) ? true : false;
+	Button.Up = (in[1] & 0x0008) ? true : false;
+	Button.Down = (in[1] & 0x0004) ? true : false;
+	Button.Left = (in[1] & 0x0001) ? true : false;
+	Button.Right = (in[1] & 0x0002) ? true : false;
 	
 	//加速度センサ
 	const int zero = 481;
@@ -318,7 +318,7 @@ void Wiimote::updateThead(Wiimote* wii) {
 		auto start = std::chrono::system_clock::now();
 		wii->update();
 		Sleep(2);
-		wii->fps = 1000/std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
+		wii->fps = 1000.0/ (double)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
 	}
 }
 
@@ -444,10 +444,19 @@ Wiimote::Pointers::Pos Wiimote::Pointers::getMaximunPos() {
 }
 
 Wiimote::Pointers::Pointers() {
-	for (int i = 0; i < 4; i++)
-		pointers[i].size = pointers[i].x = pointers[i].y = 0;
+	for (int i = 0; i < 4; i++) {
+		pointers[i].size = 0;
+		pointers[i].x = pointers[i].y = 0.0;
+	}
 }
 
 Wiimote::Pointers::Pos& Wiimote::Pointers::operator[](unsigned int n) {
 	return pointers[n];
+}
+
+bool Wiimote::isOpened() {
+	if (wiihandle == nullptr)
+		return false;
+	else
+		return true;
 }

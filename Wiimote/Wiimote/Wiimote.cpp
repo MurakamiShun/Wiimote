@@ -21,6 +21,15 @@ enum OutputReport {
 	IR2 = 0x1a
 };
 
+
+const unsigned char IRblock[5][11] = {
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x64,0x00,0xfe, 0xfd,0x05 },
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x96,0x00,0xb4, 0xb3,0x04},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0xaa,0x00,0x64, 0x63,0x03},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0xc8,0x00,0x36, 0x35,0x03},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x72,0x00,0x20, 0x1f,0x03}
+};
+
 Wiimote::Wiimote() {
 	wiihandle = nullptr;
 	Button.One = Button.Two = Button.A = Button.B = 
@@ -308,8 +317,11 @@ void Wiimote::updateThead(Wiimote* wii) {
 	wii->write(out);
 	wii->read(in);
 	wii->mtx.unlock();
+	
 	wii->setLED(0x02);
-	wii->initIRCamera();
+	//デフォ3
+	wii->initIRCamera(3);
+	
 	wii->setLED(0x01);
 	delete[] out;
 	delete[] in;
@@ -322,7 +334,7 @@ void Wiimote::updateThead(Wiimote* wii) {
 	}
 }
 
-void Wiimote::initIRCamera() {
+void Wiimote::initIRCamera(unsigned int mode) {
 	unsigned char* out = new unsigned char[output_length];
 	unsigned char* in = new unsigned char[input_length];
 	
@@ -368,15 +380,15 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 9;
 	//データ(max16byte)
-	out[6] = 0x00;
-	out[7] = 0x00;
-	out[8] = 0x00;
-	out[9] = 0x00;
-	out[10] = 0x00;
-	out[11] = 0x00;
-	out[12] = 0x90;
-	out[13] = 0x00;
-	out[14] = 0xC0;
+	out[6] = IRblock[mode][0];
+	out[7] = IRblock[mode][1];
+	out[8] = IRblock[mode][2];
+	out[9] = IRblock[mode][3];
+	out[10] = IRblock[mode][4];
+	out[11] = IRblock[mode][5];
+	out[12] = IRblock[mode][6];
+	out[13] = IRblock[mode][7];
+	out[14] = IRblock[mode][8];
 	write(out);
 	//read(in);
 	Sleep(60);
@@ -392,8 +404,8 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 2;
 	//データ(max16byte)
-	out[6] = 0x40;
-	out[7] = 0x00;
+	out[6] = IRblock[mode][9];
+	out[7] = IRblock[mode][10];
 	write(out);
 	//read(in);
 	Sleep(60);

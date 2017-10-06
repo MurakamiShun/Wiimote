@@ -16,7 +16,6 @@ private:
 	} writemethod;
 
 	void setWriteMethod();
-	void initIRCamera();
 
 	void write(unsigned char* output_report);
 	void read(unsigned char* input_report);
@@ -123,6 +122,10 @@ public:
 	///LED1:0x1, LED2:0x2, LED3:0x4, LED4:0x8
 	///</summary>
 	void setLED(unsigned char LED);
+	///<summary>
+	///IRƒJƒƒ‰‚Ìƒ‚[ƒhİ’è
+	///</summary>
+	void initIRCamera(unsigned int mode);
 
 	///<summary>
 	///Ú‘±‚µ‚Ä‚¢‚é‚©

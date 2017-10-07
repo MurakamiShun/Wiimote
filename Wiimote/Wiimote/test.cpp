@@ -1,4 +1,4 @@
-#include <iostream>
+ï»¿#include <iostream>
 #include <iomanip>
 #include "Wiimote.hpp"
 #include <stdlib.h>
@@ -6,9 +6,11 @@
 using namespace std;
 
 
-auto main() -> int{
+auto main() -> int {
 	Wiimote wii;
-	wii.open();
+	if (wii.open() == Wiimote::Status::Error) {
+		return 0;
+	}
 
 	wii.setLED(0x01 | 0x02);
 
@@ -17,11 +19,11 @@ auto main() -> int{
 	cout << " ----------------------------\n" << endl;
 	for (int i = 0; i < 2; i++) {
 		wii.ableRumble();
-		Sleep(50);
+		Sleep(100);
 		wii.disableRumble();
-		Sleep(50);
+		Sleep(100);
 	}
-	cout << "Home‚ÅI—¹" << endl;
+	cout << "Homeã§çµ‚äº†" << endl;
 	while (!wii.Button.Home) {
 		cout << "\rA:" << wii.Button.A
 			<< " B:" << wii.Button.B
@@ -29,15 +31,17 @@ auto main() -> int{
 			<< " -:" << wii.Button.Minus
 			<< " 1:" << wii.Button.One
 			<< " 2:" << wii.Button.Two
-			<< " ª:" << wii.Button.Up
-			<< " «:" << wii.Button.Down
-			<< " ©:" << wii.Button.Left
-			<< " ¨:" << wii.Button.Right
-			<< fixed << setprecision(4)
-			<< " X:" << wii.acc.x
-			<< " Y:" << wii.acc.y
-			<< " Z:" << wii.acc.z;
-		Sleep(10);
+			<< " Ââ†‘:" << wii.Button.Up
+			<< " Ââ†“:" << wii.Button.Down
+			<< " Ââ†:" << wii.Button.Left
+			<< " Ââ†’:" << wii.Button.Right
+			<< " X:"
+			<< fixed << setprecision(4) << wii.pointer.getMaximumPos().x
+			<< " Y:"
+			<< fixed << setprecision(4) << wii.pointer.getBarPos().y
+			<< "  "
+			<< setw(3) << right << (int)wii.fps << " fps";
+		Sleep(30);
 	}
 	wii.close();
 	return 0;

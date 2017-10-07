@@ -2,11 +2,13 @@
 #include <Windows.h>
 #include <setupapi.h>
 #include <hidsdi.h>
+#include <chrono>
 
 #include <thread>
 
 #pragma comment(lib,"hid")
 #pragma comment(lib, "setupapi")
+
 
 
 enum OutputReport {
@@ -19,12 +21,20 @@ enum OutputReport {
 	IR2 = 0x1a
 };
 
+
+const unsigned char IRblock[5][11] = {
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x64,0x00,0xfe, 0xfd,0x05 },
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x96,0x00,0xb4, 0xb3,0x04},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0xaa,0x00,0x64, 0x63,0x03},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0xc8,0x00,0x36, 0x35,0x03},
+	{ 0x02,0x00,0x00,0x71,0x01,0x00,0x72,0x00,0x20, 0x1f,0x03}
+};
+
 Wiimote::Wiimote() {
 	wiihandle = nullptr;
 	Button.One = Button.Two = Button.A = Button.B = 
 	Button.Minus = Button.Plus = Button.Home = 
 	Button.Up = Button.Down = Button.Left = Button.Right = false;
-	pointer.x = pointer.y = 0;
 	acc.x = acc.y = acc.z = 0;
 }
 
@@ -52,10 +62,13 @@ void Wiimote::setWriteMethod() {
 			NULL
 		);
 	}
-	read(in);
+	HidD_GetInputReport(wiihandle, in, input_length);
 	if (in[0] == 0x20)
 		int j = in[0];
 
+
+	delete[] out;
+	delete[] in;
 	return;
 }
 
@@ -78,12 +91,12 @@ void Wiimote::write(unsigned char* output_report) {
 
 void Wiimote::read(unsigned char * input_report) {
 	DWORD buff;
-	bool error = ReadFile(
+	ReadFile(
 		(HANDLE)wiihandle,
 		input_report,
 		input_length,
 		&buff,
-		NULL
+		(LPOVERLAPPED)NULL
 	);
 }
 
@@ -127,6 +140,7 @@ Wiimote::Status Wiimote::open() {
 			0,
 			NULL
 		);
+		delete[] Detail;
 		//エラー処理
 		if (handle == INVALID_HANDLE_VALUE) {
 			continue;
@@ -153,8 +167,10 @@ Wiimote::Status Wiimote::open() {
 					input_length = Capabilities.InputReportByteLength;
 					output_length = Capabilities.OutputReportByteLength;
 					wiihandle = handle;
+					Sleep(100);
 					setWriteMethod();
 					th = std::thread(updateThead, this);
+					Sleep(1000);
 					return Status::Success;
 				}
 			}
@@ -185,7 +201,7 @@ void Wiimote::rumble(bool on){
 		(LEDs.LED2 ? 0x20 : 0) |
 		(LEDs.LED3 ? 0x40 : 0) |
 		(LEDs.LED4 ? 0x80 : 0)
-		| Rumble;
+		| (Rumble ? 0x01 : 0);
 
 	mtx.lock();
 	write(out);
@@ -219,7 +235,7 @@ void Wiimote::setLED(bool first, bool second, bool third, bool fourth) {
 		(second ? 0x20 : 0) |
 		(third  ? 0x40 : 0) |
 		(fourth ? 0x80 : 0)
-		| Rumble;
+		| (Rumble ? 0x01 : 0);
 
 	mtx.lock();
 	write(out);
@@ -232,10 +248,10 @@ void Wiimote::setLED(bool first, bool second, bool third, bool fourth) {
 
 void Wiimote::setLED(unsigned char LED) {
 	setLED(
-		LED & 0x01,
-		LED & 0x02,
-		LED & 0x04,
-		LED & 0x08
+		(LED & 0x01) ? true : false,
+		(LED & 0x02) ? true : false,
+		(LED & 0x04) ? true : false,
+		(LED & 0x08) ? true : false
 	);
 }
 
@@ -250,19 +266,21 @@ void Wiimote::update() {
 	read(in);
 	mtx.unlock();
 	//判定
-	//in[0]=0x33
-	Button.One = in[2] & 0x0002;
-	Button.Two = in[2] & 0x0001;
-	Button.A = in[2] & 0x0008;
-	Button.B = in[2] & 0x0004;
-	Button.Minus = in[2] & 0x0010;
-	Button.Plus = in[1] & 0x0010;
-	Button.Home = in[2] & 0x0080;
-	Button.Up = in[1] & 0x0008;
-	Button.Down = in[1] & 0x0004;
-	Button.Left = in[1] & 0x0001;
-	Button.Right = in[1] & 0x0002;
+	//0x33
+	//ボタン
+	Button.One = (in[2] & 0x0002) ? true : false;
+	Button.Two = (in[2] & 0x0001) ? true : false;
+	Button.A = (in[2] & 0x0008) ? true : false;
+	Button.B = (in[2] & 0x0004) ? true : false;
+	Button.Minus = (in[2] & 0x0010) ? true : false;
+	Button.Plus = (in[1] & 0x0010) ? true : false;
+	Button.Home = (in[2] & 0x0080) ? true : false;
+	Button.Up = (in[1] & 0x0008) ? true : false;
+	Button.Down = (in[1] & 0x0004) ? true : false;
+	Button.Left = (in[1] & 0x0001) ? true : false;
+	Button.Right = (in[1] & 0x0002) ? true : false;
 	
+	//加速度センサ
 	const int zero = 481;
 	unsigned int x = ((in[1] & (0x20 | 0x40)) >> 5) + (in[3] << 2);
 	unsigned int y = ((in[2] & 0x20) >> 4) + (in[4] << 2);
@@ -270,52 +288,69 @@ void Wiimote::update() {
 	acc.x = ((double)((int)x - zero)) / 98.0;
 	acc.y = ((double)((int)y - zero)) / 98.0;
 	acc.z = ((double)((int)z - zero)) / 98.0;
+	
+	//IRカメラ
+	for (int i = 0; i < 4; i++) {
+		x = in[i * 3 + 6] + ((unsigned int)(in[i * 3 + 8] & 0x30) << 4);
+		y = in[i * 3 + 7] + ((unsigned int)(in[i * 3 + 8] & 0xC0) << 2);
+		unsigned short size = in[i * 3 + 8] & 0xf;
+		pointer[i].x = (double)x / 1023;
+		pointer[i].y = (double)y / 767;
+		pointer[i].size = size;
+		if (size == 15) {
+			pointer[i].x = -1;
+			pointer[i].y = -1;
+			pointer[i].size = -1;
+		}
+	}
 	delete[] in;
 }
 
 void Wiimote::updateThead(Wiimote* wii) {
 	unsigned char* out = new unsigned char[wii->output_length];
 	unsigned char* in = new unsigned char[wii->input_length];
-	wii->setLED(0x01);
 	//データ転送モードの設定
 	out[0] = OutputReport::DataReportType;
 	out[1] = 0x00;
 	out[2] = 0x33;
-	wii->mtx.lock();
+	
 	wii->write(out);
 	wii->read(in);
-	wii->mtx.unlock();
-	wii->initIRCamera();
-
+	
+	wii->setLED(0x02);
+	//デフォ3
+	wii->initIRCamera(3);
+	
+	wii->setLED(0x01);
 	delete[] out;
 	delete[] in;
 
 	while (wii->wiihandle != nullptr) {
+		auto start = std::chrono::system_clock::now();
 		wii->update();
-		Sleep(1);
+		Sleep(2);
+		wii->fps = 1000.0/ (double)std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - start).count();
 	}
 }
 
-void Wiimote::initIRCamera() {
+void Wiimote::initIRCamera(unsigned int mode) {
 	unsigned char* out = new unsigned char[output_length];
 	unsigned char* in = new unsigned char[input_length];
+	
+	mtx.lock();
 	//IRカメラの有効化
 	out[0] = OutputReport::IR;
 	out[1] = 0x04;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 
 	out[0] = OutputReport::IR2;
 	out[1] = 0x04;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
 
-	//0xb00030に0x08を書き込む
+	//0xb00030に0x01を書き込む
 	out[0] = OutputReport::WriteMemory;
 	//レジスタから
 	out[1] = 0x04;
@@ -327,11 +362,10 @@ void Wiimote::initIRCamera() {
 	out[5] = 1;
 	//データ(max16byte)
 	out[6] = 0x08;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
+
 
 	//block1
 	out[0] = OutputReport::WriteMemory;
@@ -344,19 +378,17 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 9;
 	//データ(max16byte)
-	out[6] = 0x00;
-	out[7] = 0x00;
-	out[8] = 0x00;
-	out[9] = 0x00;
-	out[10] = 0x00;
-	out[11] = 0x00;
-	out[12] = 0xFF;
-	out[13] = 0x00;
-	out[14] = 0x0C;
-	mtx.lock();
+	out[6] = IRblock[mode][0];
+	out[7] = IRblock[mode][1];
+	out[8] = IRblock[mode][2];
+	out[9] = IRblock[mode][3];
+	out[10] = IRblock[mode][4];
+	out[11] = IRblock[mode][5];
+	out[12] = IRblock[mode][6];
+	out[13] = IRblock[mode][7];
+	out[14] = IRblock[mode][8];
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
 
 	//block2
@@ -370,12 +402,10 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 2;
 	//データ(max16byte)
-	out[6] = 0x00;
-	out[7] = 0x00;
-	mtx.lock();
+	out[6] = IRblock[mode][9];
+	out[7] = IRblock[mode][10];
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
 
 	//mode number
@@ -389,11 +419,9 @@ void Wiimote::initIRCamera() {
 	//バイト数
 	out[5] = 1;
 	//データ(max16byte)
-	out[6] = 5;
-	mtx.lock();
+	out[6] = 3;
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
 
 	//0xb00030に0x08を書き込む
@@ -408,9 +436,71 @@ void Wiimote::initIRCamera() {
 	out[5] = 1;
 	//データ(max16byte)
 	out[6] = 0x08;
-	mtx.lock();
 	write(out);
 	read(in);
-	mtx.unlock();
 	Sleep(60);
+
+	mtx.unlock();
+	delete[] out;
+	delete[] in;
+}
+
+Wiimote::Pointers::Pos Wiimote::Pointers::getMaximumPos() {
+	unsigned int num = 0;
+	for (int i = 1; i < 4; i++){
+		if (pointers[i].size != -1 && pointers[num].size > pointers[i].size) {
+			num = i;
+		}
+	}
+	return pointers[num];
+}
+
+Wiimote::Pointers::Pos Wiimote::Pointers::getBarPos() {
+	Pos pos;
+	//1>2
+	unsigned int num1 = 0, num2 = 0;
+	for (int i = 1; i < 4; i++) {
+		if (pointers[i].size != -1 && pointers[num1].size >= pointers[i].size) {
+			num2 = num1;
+			num1 = i;
+		}
+	}
+	if (pointers[num2].size == -1) {
+		return pointers[num1];
+	}
+	pos.x = (pointers[num1].x + pointers[num2].x) / 2;
+	pos.y = (pointers[num1].y + pointers[num2].y) / 2;
+	pos.size = (pointers[num1].size + pointers[num2].size) / 2;
+	return pos;
+}
+
+Wiimote::Pointers::Pointers() {
+	for (int i = 0; i < 4; i++) {
+		pointers[i].size = 0;
+		pointers[i].x = pointers[i].y = 0.0;
+	}
+}
+
+Wiimote::Pointers::Pos& Wiimote::Pointers::operator[](unsigned int n) {
+	return pointers[n];
+}
+
+bool Wiimote::isOpened() {
+	if (wiihandle == nullptr)
+		return false;
+	else
+		return true;
+}
+
+
+
+Wiimote::Pointers::Pos::Pos() {
+	x = y = -1;
+	size = -1;
+}
+
+Wiimote::Pointers::Pos::Pos(const Pos& pos) {
+	x = pos.x;
+	y = pos.y;
+	size = pos.size;
 }

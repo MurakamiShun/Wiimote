@@ -1,5 +1,4 @@
 #pragma once
-
 #include <mutex>
 
 class Wiimote {
@@ -75,6 +74,10 @@ public:
 		///強度が最大の位置情報を返す
 		///</summary>
 		Pos getMaximunPos();
+		///<summary>
+		///センサーバーからの位置情報を返す
+		///</summary>
+		Pos getBarPos();
 	private:
 		Pos pointers [4];
 	} pointer;

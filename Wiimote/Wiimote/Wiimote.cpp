@@ -297,7 +297,7 @@ void Wiimote::update() {
 		pointer[i].x = (double)x / 1023;
 		pointer[i].y = (double)y / 767;
 		pointer[i].size = size;
-		if (size == 0) {
+		if (size == 15) {
 			pointer[i].x = -1;
 			pointer[i].y = -1;
 			pointer[i].size = -1;
@@ -445,12 +445,36 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	delete[] in;
 }
 
-Wiimote::Pointers::Pos Wiimote::Pointers::getMaximunPos() {
-	unsigned int size, num = 0;
-	for (int i = 1; i < 4; i++)
-		if (pointers[num].size < pointers[i].size)
-			size = pointers[num = i].size;
+Wiimote::Pointers::Pos Wiimote::Pointers::getMaximumPos() {
+	unsigned int num = 0;
+	for (int i = 1; i < 4; i++){
+		if (pointers[num].size == -1) {
+			num = i;
+		}
+		else if (pointers[num].size > pointers[i].size) {
+			num = i;
+		}
+	}
 	return pointers[num];
+}
+
+Wiimote::Pointers::Pos Wiimote::Pointers::getBarPos() {
+	Pos pos;
+	//1>2
+	unsigned int num1 = 0, num2 = 0;
+	for (int i = 1; i < 4; i++) {
+		if (pointers[i].size != -1 && pointers[num1].size >= pointers[i].size) {
+			num2 = num1;
+			num1 = i;
+		}
+	}
+	if (pointers[num2].size == -1) {
+		return pointers[num1];
+	}
+	pos.x = (pointers[num1].x + pointers[num2].x) / 2;
+	pos.y = (pointers[num1].y + pointers[num2].y) / 2;
+	pos.size = (pointers[num1].size + pointers[num2].size) / 2;
+	return pos;
 }
 
 Wiimote::Pointers::Pointers() {
@@ -471,25 +495,7 @@ bool Wiimote::isOpened() {
 		return true;
 }
 
-Wiimote::Pointers::Pos Wiimote::Pointers::getBarPos() {
-	Pos pos;
-	//1>2
-	unsigned int size;
-	unsigned int num1 = 0, num2 = 0;
-	for (int i = 1; i < 4; i++) {
-		if (pointers[num1].size <= pointers[i].size) {
-			num2 = num1;
-			size = pointers[num1 = i].size;
-		}
-	}
-	if (pointers[num2].size == -1) {
-		return pointers[num1];
-	}
-	pos.x = (pointers[num1].x + pointers[num2].x) / 2;
-	pos.y = (pointers[num1].y + pointers[num2].y) / 2;
-	pos.size = (pointers[num1].size + pointers[num2].size) / 2;
-	return pos;
-}
+
 
 Wiimote::Pointers::Pos::Pos() {
 	x = y = -1;

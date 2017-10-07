@@ -75,7 +75,7 @@ public:
 		///<summary>
 		///強度が最大の位置情報を返す
 		///</summary>
-		Pos getMaximunPos();
+		Pos getMaximumPos();
 		///<summary>
 		///センサーバーからの位置情報を返す
 		///</summary>

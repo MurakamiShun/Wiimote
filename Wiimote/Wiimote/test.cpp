@@ -36,7 +36,7 @@ auto main() -> int {
 			<< " ←:" << wii.Button.Left
 			<< " →:" << wii.Button.Right
 			<< " X:"
-			<< fixed << setprecision(4) << wii.pointer.getBarPos().x
+			<< fixed << setprecision(4) << wii.pointer.getMaximumPos().x
 			<< " Y:"
 			<< fixed << setprecision(4) << wii.pointer.getBarPos().y
 			<< "  "

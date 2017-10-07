@@ -448,10 +448,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 Wiimote::Pointers::Pos Wiimote::Pointers::getMaximumPos() {
 	unsigned int num = 0;
 	for (int i = 1; i < 4; i++){
-		if (pointers[num].size == -1) {
-			num = i;
-		}
-		else if (pointers[num].size > pointers[i].size) {
+		if (pointers[i].size != -1 && pointers[num].size > pointers[i].size) {
 			num = i;
 		}
 	}

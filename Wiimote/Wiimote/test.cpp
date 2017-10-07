@@ -36,9 +36,9 @@ auto main() -> int {
 			<< " ←:" << wii.Button.Left
 			<< " →:" << wii.Button.Right
 			<< " X:"
-			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().x
+			<< fixed << setprecision(4) << wii.pointer.getBarPos().x
 			<< " Y:"
-			<< fixed << setprecision(4) << wii.pointer.getMaximunPos().y
+			<< fixed << setprecision(4) << wii.pointer.getBarPos().y
 			<< "  "
 			<< setw(3) << right << (int)wii.fps << " fps";
 		Sleep(30);

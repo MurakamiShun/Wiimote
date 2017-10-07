@@ -170,6 +170,7 @@ Wiimote::Status Wiimote::open() {
 					Sleep(100);
 					setWriteMethod();
 					th = std::thread(updateThead, this);
+					Sleep(1000);
 					return Status::Success;
 				}
 			}
@@ -308,15 +309,13 @@ void Wiimote::update() {
 void Wiimote::updateThead(Wiimote* wii) {
 	unsigned char* out = new unsigned char[wii->output_length];
 	unsigned char* in = new unsigned char[wii->input_length];
-	wii->setLED(0x04);
 	//データ転送モードの設定
 	out[0] = OutputReport::DataReportType;
 	out[1] = 0x00;
 	out[2] = 0x33;
-	wii->mtx.lock();
+	
 	wii->write(out);
 	wii->read(in);
-	wii->mtx.unlock();
 	
 	wii->setLED(0x02);
 	//デフォ3
@@ -364,7 +363,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	//データ(max16byte)
 	out[6] = 0x08;
 	write(out);
-	//read(in);
+	read(in);
 	Sleep(60);
 
 
@@ -389,7 +388,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	out[13] = IRblock[mode][7];
 	out[14] = IRblock[mode][8];
 	write(out);
-	//read(in);
+	read(in);
 	Sleep(60);
 
 	//block2
@@ -406,7 +405,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	out[6] = IRblock[mode][9];
 	out[7] = IRblock[mode][10];
 	write(out);
-	//read(in);
+	read(in);
 	Sleep(60);
 
 	//mode number
@@ -422,7 +421,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	//データ(max16byte)
 	out[6] = 3;
 	write(out);
-	//read(in);
+	read(in);
 	Sleep(60);
 
 	//0xb00030に0x08を書き込む
@@ -438,7 +437,7 @@ void Wiimote::initIRCamera(unsigned int mode) {
 	//データ(max16byte)
 	out[6] = 0x08;
 	write(out);
-	//read(in);
+	read(in);
 	Sleep(60);
 
 	mtx.unlock();
@@ -490,4 +489,15 @@ Wiimote::Pointers::Pos Wiimote::Pointers::getBarPos() {
 	pos.y = (pointers[num1].y + pointers[num2].y) / 2;
 	pos.size = (pointers[num1].size + pointers[num2].size) / 2;
 	return pos;
+}
+
+Wiimote::Pointers::Pos::Pos() {
+	x = y = -1;
+	size = -1;
+}
+
+Wiimote::Pointers::Pos::Pos(const Pos& pos) {
+	x = pos.x;
+	y = pos.y;
+	size = pos.size;
 }

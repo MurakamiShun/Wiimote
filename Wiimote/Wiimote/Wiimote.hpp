@@ -64,6 +64,8 @@ public:
 		struct Pos {
 			double x, y;
 			int size;
+			Pos();
+			Pos(const Pos& pos);
 		};
 		Pointers();
 		///<summary>

@@ -24,6 +24,8 @@ private:
 	static void updateThead(Wiimote*);
 	void update();
 
+	bool exit_init;
+
 public:
 	///<summary>
 	///“ü—Íƒ{ƒ^ƒ“

@@ -170,7 +170,9 @@ Wiimote::Status Wiimote::open() {
 					Sleep(100);
 					setWriteMethod();
 					th = std::thread(updateThead, this);
-					Sleep(1000);
+					exit_init = false;
+					while (!exit_init)
+						Sleep(10);
 					return Status::Success;
 				}
 			}
@@ -190,26 +192,7 @@ void Wiimote::close() {
 }
 
 void Wiimote::rumble(bool on){
-	unsigned char* out = new unsigned char[output_length];
-	unsigned char* in = new unsigned char[input_length];
-
 	Rumble = on;
-
-	out[0] = OutputReport::LEDs;
-	out[1] =
-		(LEDs.LED1 ? 0x10 : 0) |
-		(LEDs.LED2 ? 0x20 : 0) |
-		(LEDs.LED3 ? 0x40 : 0) |
-		(LEDs.LED4 ? 0x80 : 0)
-		| (Rumble ? 0x01 : 0);
-
-	mtx.lock();
-	write(out);
-	read(in);
-	mtx.unlock();
-
-	delete[] out;
-	delete[] in;
 }
 
 void Wiimote::ableRumble(){
@@ -222,28 +205,10 @@ void Wiimote::disableRumble(){
 
 
 void Wiimote::setLED(bool first, bool second, bool third, bool fourth) {
-	unsigned char* out = new unsigned char[output_length];
-	unsigned char* in = new unsigned char[input_length];
 	LEDs.LED1 = first;
 	LEDs.LED2 = second;
 	LEDs.LED3 = third;
 	LEDs.LED4 = fourth;
-
-	out[0] = OutputReport::LEDs;
-	out[1] = 
-		(first  ? 0x10 : 0) |
-		(second ? 0x20 : 0) |
-		(third  ? 0x40 : 0) |
-		(fourth ? 0x80 : 0)
-		| (Rumble ? 0x01 : 0);
-
-	mtx.lock();
-	write(out);
-	read(in);
-	mtx.unlock();
-
-	delete[] out;
-	delete[] in;
 }
 
 void Wiimote::setLED(unsigned char LED) {
@@ -256,15 +221,22 @@ void Wiimote::setLED(unsigned char LED) {
 }
 
 void Wiimote::update() {
-	if (wiihandle == nullptr)
-		return;
-
+	unsigned char* out = new unsigned char[output_length];
 	unsigned char* in = new unsigned char[input_length];
 
-	mtx.lock();
+	out[0] = OutputReport::LEDs;
+	out[1] =
+		(LEDs.LED1 ? 0x10 : 0) |
+		(LEDs.LED2 ? 0x20 : 0) |
+		(LEDs.LED3 ? 0x40 : 0) |
+		(LEDs.LED4 ? 0x80 : 0)
+		| (Rumble ? 0x01 : 0);
+
+	write(out);
+	read(in);
+
 	//読み込み
 	read(in);
-	mtx.unlock();
 	//判定
 	//0x33
 	//ボタン
@@ -298,11 +270,10 @@ void Wiimote::update() {
 		pointer[i].y = (double)y / 767;
 		pointer[i].size = size;
 		if (size == 15) {
-			pointer[i].x = -1;
-			pointer[i].y = -1;
 			pointer[i].size = -1;
 		}
 	}
+	delete[] out;
 	delete[] in;
 }
 
@@ -317,13 +288,14 @@ void Wiimote::updateThead(Wiimote* wii) {
 	wii->write(out);
 	wii->read(in);
 	
-	wii->setLED(0x02);
 	//デフォ3
 	wii->initIRCamera(3);
 	
 	wii->setLED(0x01);
 	delete[] out;
 	delete[] in;
+
+	wii->exit_init = true;
 
 	while (wii->wiihandle != nullptr) {
 		auto start = std::chrono::system_clock::now();
@@ -464,9 +436,6 @@ Wiimote::Pointers::Pos Wiimote::Pointers::getBarPos() {
 			num2 = num1;
 			num1 = i;
 		}
-	}
-	if (pointers[num2].size == -1) {
-		return pointers[num1];
 	}
 	pos.x = (pointers[num1].x + pointers[num2].x) / 2;
 	pos.y = (pointers[num1].y + pointers[num2].y) / 2;

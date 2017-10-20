@@ -10,7 +10,6 @@
 #pragma comment(lib, "setupapi")
 
 
-
 enum OutputReport {
 	LEDs = 0x11,
 	DataReportType = 0x12,
